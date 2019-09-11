@@ -1,0 +1,6 @@
+[requires]
+cpprestsdk/2.10.14@bincrafters/stable
+open62541/0.3.0@bincrafters/stable
+
+[generators]
+cmake
