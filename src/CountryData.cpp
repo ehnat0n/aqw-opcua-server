@@ -25,7 +25,6 @@ namespace weatherserver {
 
         std::string name;
         std::string code;
-        // added default values so there are no unitialized variable errors when parsing fails
         uint32_t cities = 0;
         uint32_t locations = 0;
 
@@ -83,7 +82,7 @@ namespace weatherserver {
         locations = allLocations;
     }
 
-    void CountryData::setLocationsNumber(const int newLocationsNumber)
+    void CountryData::setLocationsNumber(const uint32_t newLocationsNumber)
     {
         locationsNumber = newLocationsNumber;
     }

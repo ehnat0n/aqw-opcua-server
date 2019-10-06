@@ -374,9 +374,17 @@ namespace weatherserver {
     }
 
     /*
-        Checking if locations number in the server model matches with actual json parse. Adjusting if needed.
+        Checking if locations number in the server model matches with passed value. Trying to adjust if its different.
+        Returns true if:
+            - model locations number was successfuly read and already matches with passed value;
+            - value is different, but adjustment (write) was successful.
+        Returns false if:
+            - couldn't read existing value from the model;
+            - existing value was different and adjustment (write) failed.
      */
-    static void validateLocationsNumberInTheModel(UA_Server& server, CountryData& country, size_t actualParseSize) {
+    static bool validateLocationsNumberInTheModel(UA_Server& server, const CountryData& country, uint32_t valueToValidate) {
+
+         bool validationFlag = false;
 
         //crafting NodeID for our locations number attribute inside the information model
         std::string locationsNumberAttributeString = std::string(CountryData::COUNTRIES_FOLDER_NODE_ID) + "."
@@ -393,54 +401,62 @@ namespace weatherserver {
 
             UA_UInt32 valueInModelUInt = *(UA_UInt32*)valueInModel.data;
             std::cout << "Value in the information model: " << valueInModelUInt << std::endl;
-            UA_UInt32 valueJsonUInt = actualParseSize;
-            std::cout << "Value after parsing json file: " << valueJsonUInt << std::endl;
+            UA_UInt32 valueToValidateUInt = valueToValidate;
+            std::cout << "Value that we are comparing to: " << valueToValidateUInt << std::endl;
 
-            if (valueInModelUInt != valueJsonUInt) {
+            if (valueInModelUInt != valueToValidateUInt) {
                 std::cout << "Number of locations in the information model doesn't match one after parsing. Trying to adjust..." << std::endl;
-                UA_Variant_setScalarCopy(&valueInModel, &valueJsonUInt, &UA_TYPES[UA_TYPES_UINT32]);
+                UA_Variant_setScalarCopy(&valueInModel, &valueToValidateUInt, &UA_TYPES[UA_TYPES_UINT32]);
                 UA_StatusCode retvalWrite = UA_Server_writeValue(&server, locationsNumberAttributeNodeId, valueInModel);
 
                 if (retvalWrite == UA_STATUSCODE_GOOD) {
-                    //set CountryData parameter to the new value to match the model one
-                    country.setLocationsNumber(actualParseSize);
-                    std::cout << "New parameter/model value: " << country.getLocationsNumber() << std::endl;
+                    std::cout << "Successfuly put new value in the model. " << std::endl;
+                    validationFlag = true;
                 }
                 else {
-                    std::cout << "Adjustment failed." << std::endl;
+                    //validationFlag still false
+                    std::cout << "Values didn't match, but adjustment failed." << std::endl;
                 }
             }
             else {
-                std::cout << "Number of locations in the information model matches the one after parsing. All good!" << std::endl;
+                std::cout << "Number of locations in the model already matches with passed value." << std::endl;
+                validationFlag = true;
             }
         }
         else {
+            //validationFlag still false
             std::cout << "Coudn't check number of locations in the information model for this country: " << country.getName() << std::endl;
         }
-
         UA_Variant_deleteMembers(&valueInModel);
+        return validationFlag;
     }
 
     /*
     Request all the Locations objects from the web service and its subcomponents.
     Map these objects returned from the web service in OPC UA objects and put them available in the address space.
-    @param *server - The OPC UA server where the objects will be added in the address space view.
+    @param &server - The OPC UA server where the objects will be added in the address space view.
     @param &country - The CountryData object which the locations will be requested for. This object will be modified
     in this function. Locations will be added to it.
-    @param UA_NodeId parentNodeId - The parent node id of the object where the variables will be added in OPC UA.
+    @param &UA_NodeId parentNodeId - The parent node id of the object where the variables will be added in OPC UA.
     */
     static void requestLocations(UA_Server& server, CountryData& country, const UA_NodeId& parentNodeId) {
         try {
-            size_t currentLocationsNumber = country.getLocationsNumber();
+            uint32_t currentLocationsNumber = country.getLocationsNumber();
 
             webService->fetchAllLocations(country.getCode(), currentLocationsNumber).then([&](web::json::value response) {
                 country.setLocations(LocationData::parseJsonArray(response));
 
-                size_t parseVectorSize = country.getLocations().size();
+                uint32_t parseVectorSize = country.getLocations().size();
 
                 if (currentLocationsNumber != parseVectorSize) {
-                    std::cout << "Current locations number parameter doesn't match json parse. Validating the model..." << std::endl;
-                    validateLocationsNumberInTheModel(server, country, parseVectorSize);
+                    std::cout << "Current locations number parameter doesn't match json parse vactor size. Validating the model..." << std::endl;
+                    if (validateLocationsNumberInTheModel(server, country, parseVectorSize)) {
+                        std::cout << "Validation successful. Adjusting class paramter." << std::endl;
+                        country.setLocationsNumber(parseVectorSize);
+                    }
+                    else {
+                        std::cout << "Validation failed. Keeping as it is..." << std::endl;
+                    }
                 }
 
                 for (size_t i{ 0 }; i < parseVectorSize; i++) {

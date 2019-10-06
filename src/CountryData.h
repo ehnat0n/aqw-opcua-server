@@ -43,7 +43,7 @@ namespace weatherserver {
         /* Indetifies that this object node was added to the OPC UA address space. */
         void setIsInitialized(const bool initialized);
         void setLocations(const std::vector<LocationData>& allLocations);
-        void setLocationsNumber(const int newLocationsNumber);
+        void setLocationsNumber(const uint32_t newLocationsNumber);
 
         std::string getName() const { return name; }
         std::string getCode() const { return code; }
