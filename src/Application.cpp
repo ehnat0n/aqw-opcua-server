@@ -392,33 +392,36 @@ namespace weatherserver {
                 */
 
                 //crafting NodeID for our locations number attribute inside the information model
-                std::string locationsNumberAtrID = static_cast<std::string>(CountryData::COUNTRIES_FOLDER_NODE_ID) + "."
+                std::string locationsNumberAttributeString = static_cast<std::string>(CountryData::COUNTRIES_FOLDER_NODE_ID) + "."
                     + country.getCode() + "." + static_cast<std::string>(CountryData::BROWSE_LOCATIONS_NUMBER);
-                std::cout << "Checking locations number for the following ID: " << locationsNumberAtrID << std::endl;
-                UA_NodeId nodeIdLocationsNumberAtr = UA_NODEID_STRING(WebService::OPC_NS_INDEX, const_cast<char*>(locationsNumberAtrID.c_str()));
+                std::cout << "Checking locations number for the following ID: " << locationsNumberAttributeString << std::endl;
+                UA_NodeId locationsNumberAttributeNodeId = UA_NODEID_STRING(WebService::OPC_NS_INDEX,
+                    const_cast<char*>(locationsNumberAttributeString.c_str()));
 
                 UA_Variant valueInModel;
                 UA_Variant_init(&valueInModel);
-                UA_StatusCode retvalRead = UA_Server_readValue(&server, nodeIdLocationsNumberAtr, &valueInModel);
+                UA_StatusCode retvalRead = UA_Server_readValue(&server, locationsNumberAttributeNodeId, &valueInModel);
 
                 if (retvalRead == UA_STATUSCODE_GOOD && UA_Variant_hasScalarType(&valueInModel, &UA_TYPES[UA_TYPES_UINT32])) {
 
-                    UA_UInt32 valueInModelUAInt = *(UA_UInt32 *) valueInModel.data;
-                    std::cout << "Value in the information model: " << valueInModelUAInt << std::endl;
-                    UA_UInt32 valueAfterParsingUAInt = country.getLocations().size();
-                    std::cout << "Value after parsing json file: " << valueAfterParsingUAInt << std::endl;
+                    UA_UInt32 valueInModelUInt = *(UA_UInt32 *) valueInModel.data;
+                    std::cout << "Value in the information model: " << valueInModelUInt << std::endl;
+                    UA_UInt32 valueJsonUInt = country.getLocations().size();
+                    std::cout << "Value after parsing json file: " << valueJsonUInt << std::endl;
 
-                    if (!(valueInModelUAInt == valueAfterParsingUAInt)) {
+                    if (!(valueInModelUInt == valueJsonUInt)) {
                         std::cout << "Number of locations in the information model doesn't match one after parsing. Trying to adjust..." << std::endl;
-                        UA_Variant_setScalarCopy(&valueInModel, &valueAfterParsingUAInt, &UA_TYPES[UA_TYPES_UINT32]);
-                        UA_StatusCode retvalWrite = UA_Server_writeValue(&server, nodeIdLocationsNumberAtr, valueInModel);
+                        UA_Variant_setScalarCopy(&valueInModel, &valueJsonUInt, &UA_TYPES[UA_TYPES_UINT32]);
+                        UA_StatusCode retvalWrite = UA_Server_writeValue(&server, locationsNumberAttributeNodeId, valueInModel);
 
                         //Re-read the value from the model to make sure we got it right.
                         if (retvalRead == UA_STATUSCODE_GOOD) {
                             UA_Variant valueInModel2;
-                            UA_StatusCode retvalRead2 = UA_Server_readValue(&server, nodeIdLocationsNumberAtr, &valueInModel2);
-                            UA_UInt32 valueInModelUAInt2 = *(UA_UInt32*)valueInModel2.data;
-                            std::cout << "New value in the information model: " << valueInModelUAInt2 << std::endl;
+                            UA_Variant_init(&valueInModel2);
+                            UA_StatusCode retvalRead2 = UA_Server_readValue(&server, locationsNumberAttributeNodeId, &valueInModel2);
+                            UA_UInt32 valueInModel2UInt = *(UA_UInt32*)valueInModel2.data;
+                            std::cout << "New value in the information model: " << valueInModel2UInt << std::endl;
+                            UA_Variant_deleteMembers(&valueInModel2);
                         }
                         else {
                             std::cout << "Adjustment failed." << std::endl;
