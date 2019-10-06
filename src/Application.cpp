@@ -388,6 +388,47 @@ namespace weatherserver {
             webService->fetchAllLocations(country.getCode(), country.getLocationsNumber()).then([&](web::json::value response) {
                 country.setLocations(LocationData::parseJsonArray(response));
 
+                /*
+                Trying to check if original LocationsNumber actually matches with records in json file. Adjust if needed.
+                */
+                //crafting NodeID for our locations number attribute inside the information model
+                std::string locationsNumberAtrID = static_cast<std::string>(CountryData::COUNTRIES_FOLDER_NODE_ID) + "."
+                    + country.getCode() + "." + static_cast<std::string>(CountryData::BROWSE_LOCATIONS_NUMBER);
+                std::cout << "Checking locations number for the following ID: " << locationsNumberAtrID << std::endl;
+                UA_NodeId nodeIdLocationsNumberAtr = UA_NODEID_STRING(WebService::OPC_NS_INDEX, const_cast<char*>(locationsNumberAtrID.c_str()));
+
+                UA_Variant valueInModel;
+                UA_StatusCode retvalRead = UA_Server_readValue(server, nodeIdLocationsNumberAtr, &valueInModel);
+
+                if (retvalRead == UA_STATUSCODE_GOOD && UA_Variant_hasScalarType(&valueInModel, &UA_TYPES[UA_TYPES_UINT32])) {
+
+                    UA_UInt32 valueInModelUAInt = *(UA_UInt32 *) valueInModel.data;
+                    std::cout << "Value in the information model: " << valueInModelUAInt << std::endl;
+                    UA_UInt32 valueAfterParsingUAInt = country.getLocations().size();
+                    std::cout << "Value after parsing json file: " << valueAfterParsingUAInt << std::endl;
+
+                    if (!(valueInModelUAInt == valueAfterParsingUAInt)) {
+                        std::cout << "Number of locations in the information model doesn't match one after parsing. Trying to adjust..." << std::endl;
+                        UA_Variant_setScalar(&valueInModel, &valueAfterParsingUAInt, &UA_TYPES[UA_TYPES_UINT32]);
+                        UA_StatusCode retvalWrite = UA_Server_writeValue(server, nodeIdLocationsNumberAtr, valueInModel);
+                        if (retvalRead == UA_STATUSCODE_GOOD) {
+                            UA_Variant valueInModel2;
+                            UA_StatusCode retvalRead2 = UA_Server_readValue(server, nodeIdLocationsNumberAtr, &valueInModel2);
+                            UA_UInt32 valueInModelUAInt2 = *(UA_UInt32*)valueInModel2.data;
+                            std::cout << "New value in the information model: " << valueInModelUAInt2 << std::endl;
+                        }
+                        else {
+                            std::cout << "Adjustment failed." << std::endl;
+                        }
+                    }
+                    else {
+                        std::cout << "Number of locations in the information model matches the one after parsing. All good!" << std::endl;
+                    }
+                }
+                else {
+                    std::cout << "Coudn't check number of locations in the information model for this country: " << country.getName() << std::endl;
+                }
+
                 for (size_t i{ 0 }; i < country.getLocations().size(); i++) {
                     std::string locationName = country.getLocations().at(i).getName();
                     std::string locationCity = country.getLocations().at(i).getCity();
@@ -444,7 +485,7 @@ namespace weatherserver {
     @param *server - The OPC UA server where the objects will be added in the address space view.
     @param UA_NodeId parentNodeId - The parent node id of the object where the variables will be added in OPC UA.
     */
-    void requestCountries(UA_Server* server, const UA_NodeId& parentNodeId) {
+    void requestCountries(UA_Server* server, const UA_NodeId* parentNodeId) {
         try {
             webService->fetchAllCountries().then([&](web::json::value response) {
                 webService->setAllCountries(CountryData::parseJsonArray(response));
@@ -466,7 +507,7 @@ namespace weatherserver {
                     char countryObjAttrDesc[] = "Country object with attributes and locations information.";
                     countryObjAttr.description = UA_LOCALIZEDTEXT(locale, countryObjAttrDesc);
                     countryObjAttr.displayName = UA_LOCALIZEDTEXT_ALLOC(locale, countryName.c_str());
-                    UA_Server_addObjectNode(server, countryObjId, parentNodeId,
+                    UA_Server_addObjectNode(server, countryObjId, *parentNodeId,
                         UA_NODEID_NUMERIC(0, UA_NS0ID_ORGANIZES),
                         UA_QUALIFIEDNAME_ALLOC(WebService::OPC_NS_INDEX, countryName.c_str()),
                         UA_NODEID_NUMERIC(0, UA_NS0ID_FOLDERTYPE), countryObjAttr, NULL, NULL);
@@ -562,7 +603,7 @@ namespace weatherserver {
                 UA_QUALIFIEDNAME(WebService::OPC_NS_INDEX, CountryData::COUNTRIES_FOLDER_NODE_ID),
                 UA_NODEID_NUMERIC(0, UA_NS0ID_FOLDERTYPE), countriesObjAttr, NULL, NULL);
 
-            requestCountries(server, countriesObjId);
+            requestCountries(server, &countriesObjId);
         }
     }
 
