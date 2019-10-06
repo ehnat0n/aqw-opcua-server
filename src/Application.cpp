@@ -376,7 +376,7 @@ namespace weatherserver {
     /*
         Checking if locations number in the server model matches with actual json parse. Adjusting if needed.
      */
-    static void validateLocationsNumberInTheModel(UA_Server& server, CountryData& country, int actualParseSize) {
+    static void validateLocationsNumberInTheModel(UA_Server& server, CountryData& country, size_t actualParseSize) {
 
         //crafting NodeID for our locations number attribute inside the information model
         std::string locationsNumberAttributeString = std::string(CountryData::COUNTRIES_FOLDER_NODE_ID) + "."
@@ -402,22 +402,9 @@ namespace weatherserver {
                 UA_StatusCode retvalWrite = UA_Server_writeValue(&server, locationsNumberAttributeNodeId, valueInModel);
 
                 if (retvalWrite == UA_STATUSCODE_GOOD) {
-                    //Re-read the value from the model to make sure we got it right.
-                    UA_Variant valueInModel2;
-                    UA_Variant_init(&valueInModel2);
-                    UA_StatusCode retvalRead2 = UA_Server_readValue(&server, locationsNumberAttributeNodeId, &valueInModel2);
-                    if (retvalRead2 == UA_STATUSCODE_GOOD && UA_Variant_hasScalarType(&valueInModel2, &UA_TYPES[UA_TYPES_UINT32])) {
-                        UA_UInt32 valueInModel2UInt = *(UA_UInt32*)valueInModel2.data;
-                        std::cout << "New value in the information model: " << valueInModel2UInt << std::endl;
-                        UA_Variant_deleteMembers(&valueInModel2);
-
-                        //set CountryData parameter to the new value to match the model one
-                        country.setLocationsNumber(actualParseSize);
-                        std::cout << "New parameter value: " << country.getLocationsNumber() << std::endl;
-                    }
-                    else {
-                        std::cout << "New value re-read failed." << std::endl;
-                    }
+                    //set CountryData parameter to the new value to match the model one
+                    country.setLocationsNumber(actualParseSize);
+                    std::cout << "New parameter/model value: " << country.getLocationsNumber() << std::endl;
                 }
                 else {
                     std::cout << "Adjustment failed." << std::endl;
@@ -444,12 +431,12 @@ namespace weatherserver {
     */
     static void requestLocations(UA_Server& server, CountryData& country, const UA_NodeId& parentNodeId) {
         try {
-            int currentLocationsNumber = country.getLocationsNumber();
+            size_t currentLocationsNumber = country.getLocationsNumber();
 
             webService->fetchAllLocations(country.getCode(), currentLocationsNumber).then([&](web::json::value response) {
                 country.setLocations(LocationData::parseJsonArray(response));
 
-                int parseVectorSize = country.getLocations().size();
+                size_t parseVectorSize = country.getLocations().size();
 
                 if (currentLocationsNumber != parseVectorSize) {
                     std::cout << "Current locations number parameter doesn't match json parse. Validating the model..." << std::endl;
@@ -465,7 +452,7 @@ namespace weatherserver {
                     /* Creates the identifier for the node id of the new Location object
                     The identifier for the node id of every location object will be: Countries.CountryCode.LocationName */
                     std::string countries{ CountryData::COUNTRIES_FOLDER_NODE_ID };
-                    std::string locationObjNameId =std::string(CountryData::COUNTRIES_FOLDER_NODE_ID) + "." + locationCountryCode
+                    std::string locationObjNameId = std::string(CountryData::COUNTRIES_FOLDER_NODE_ID) + "." + locationCountryCode
                         + "." + locationName;
                     /* Creates an Location object node containing all the weather information related to it. */
                     UA_NodeId locationObjId = UA_NODEID_STRING(WebService::OPC_NS_INDEX, const_cast<char*>(locationObjNameId.c_str()));
