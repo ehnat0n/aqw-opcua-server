@@ -83,6 +83,11 @@ namespace weatherserver {
         locations = allLocations;
     }
 
+    void CountryData::setLocationsNumber(const int newLocationsNumber)
+    {
+        locationsNumber = newLocationsNumber;
+    }
+
     bool CountryData::operator<(const CountryData& rhs) const {
         return this->code < rhs.code;
     }

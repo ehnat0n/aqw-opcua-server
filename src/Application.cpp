@@ -187,7 +187,7 @@ namespace weatherserver {
         // #################### Latitude variable node
         /* Creates the identifier for the node id of the new variable node class
         The identifier for the node id of every variable will be: Countries.CountryCode.LocationName.Variable */
-        std::string parentNameId = static_cast<std::string>(CountryData::COUNTRIES_FOLDER_NODE_ID)
+        std::string parentNameId = std::string(CountryData::COUNTRIES_FOLDER_NODE_ID)
             + "." + location.getCountryCode() + "." + location.getName();
         std::string latitudeNameId = parentNameId + "." + WeatherData::BROWSE_LATITUDE;
         UA_NodeId latitudeVarNodeId = UA_NODEID_STRING(WebService::OPC_NS_INDEX, const_cast<char*>(latitudeNameId.c_str()));
@@ -374,6 +374,67 @@ namespace weatherserver {
     }
 
     /*
+        Checking if locations number in the server model matches with actual json parse. Adjusting if needed.
+     */
+    static void validateLocationsNumberInTheModel(UA_Server& server, CountryData& country, int actualParseSize) {
+
+        //crafting NodeID for our locations number attribute inside the information model
+        std::string locationsNumberAttributeString = std::string(CountryData::COUNTRIES_FOLDER_NODE_ID) + "."
+            + country.getCode() + "." + std::string(CountryData::BROWSE_LOCATIONS_NUMBER);
+        std::cout << "Checking locations number for the following ID: " << locationsNumberAttributeString << std::endl;
+        UA_NodeId locationsNumberAttributeNodeId = UA_NODEID_STRING(WebService::OPC_NS_INDEX,
+            const_cast<char*>(locationsNumberAttributeString.c_str()));
+
+        UA_Variant valueInModel;
+        UA_Variant_init(&valueInModel);
+        UA_StatusCode retvalRead = UA_Server_readValue(&server, locationsNumberAttributeNodeId, &valueInModel);
+
+        if (retvalRead == UA_STATUSCODE_GOOD && UA_Variant_hasScalarType(&valueInModel, &UA_TYPES[UA_TYPES_UINT32])) {
+
+            UA_UInt32 valueInModelUInt = *(UA_UInt32*)valueInModel.data;
+            std::cout << "Value in the information model: " << valueInModelUInt << std::endl;
+            UA_UInt32 valueJsonUInt = actualParseSize;
+            std::cout << "Value after parsing json file: " << valueJsonUInt << std::endl;
+
+            if (valueInModelUInt != valueJsonUInt) {
+                std::cout << "Number of locations in the information model doesn't match one after parsing. Trying to adjust..." << std::endl;
+                UA_Variant_setScalarCopy(&valueInModel, &valueJsonUInt, &UA_TYPES[UA_TYPES_UINT32]);
+                UA_StatusCode retvalWrite = UA_Server_writeValue(&server, locationsNumberAttributeNodeId, valueInModel);
+
+                if (retvalWrite == UA_STATUSCODE_GOOD) {
+                    //Re-read the value from the model to make sure we got it right.
+                    UA_Variant valueInModel2;
+                    UA_Variant_init(&valueInModel2);
+                    UA_StatusCode retvalRead2 = UA_Server_readValue(&server, locationsNumberAttributeNodeId, &valueInModel2);
+                    if (retvalRead2 == UA_STATUSCODE_GOOD && UA_Variant_hasScalarType(&valueInModel2, &UA_TYPES[UA_TYPES_UINT32])) {
+                        UA_UInt32 valueInModel2UInt = *(UA_UInt32*)valueInModel2.data;
+                        std::cout << "New value in the information model: " << valueInModel2UInt << std::endl;
+                        UA_Variant_deleteMembers(&valueInModel2);
+
+                        //set CountryData parameter to the new value to match the model one
+                        country.setLocationsNumber(actualParseSize);
+                        std::cout << "New parameter value: " << country.getLocationsNumber() << std::endl;
+                    }
+                    else {
+                        std::cout << "New value re-read failed." << std::endl;
+                    }
+                }
+                else {
+                    std::cout << "Adjustment failed." << std::endl;
+                }
+            }
+            else {
+                std::cout << "Number of locations in the information model matches the one after parsing. All good!" << std::endl;
+            }
+        }
+        else {
+            std::cout << "Coudn't check number of locations in the information model for this country: " << country.getName() << std::endl;
+        }
+
+        UA_Variant_deleteMembers(&valueInModel);
+    }
+
+    /*
     Request all the Locations objects from the web service and its subcomponents.
     Map these objects returned from the web service in OPC UA objects and put them available in the address space.
     @param *server - The OPC UA server where the objects will be added in the address space view.
@@ -383,61 +444,19 @@ namespace weatherserver {
     */
     static void requestLocations(UA_Server& server, CountryData& country, const UA_NodeId& parentNodeId) {
         try {
-            // ReSharper disable once CppExpressionWithoutSideEffects
-            webService->fetchAllLocations(country.getCode(), country.getLocationsNumber()).then([&](web::json::value response) {
+            int currentLocationsNumber = country.getLocationsNumber();
+
+            webService->fetchAllLocations(country.getCode(), currentLocationsNumber).then([&](web::json::value response) {
                 country.setLocations(LocationData::parseJsonArray(response));
 
-                /*
-                Trying to check if original LocationsNumber actually matches with records in json file. Adjust if needed.
-                */
+                int parseVectorSize = country.getLocations().size();
 
-                //crafting NodeID for our locations number attribute inside the information model
-                std::string locationsNumberAttributeString = static_cast<std::string>(CountryData::COUNTRIES_FOLDER_NODE_ID) + "."
-                    + country.getCode() + "." + static_cast<std::string>(CountryData::BROWSE_LOCATIONS_NUMBER);
-                std::cout << "Checking locations number for the following ID: " << locationsNumberAttributeString << std::endl;
-                UA_NodeId locationsNumberAttributeNodeId = UA_NODEID_STRING(WebService::OPC_NS_INDEX,
-                    const_cast<char*>(locationsNumberAttributeString.c_str()));
-
-                UA_Variant valueInModel;
-                UA_Variant_init(&valueInModel);
-                UA_StatusCode retvalRead = UA_Server_readValue(&server, locationsNumberAttributeNodeId, &valueInModel);
-
-                if (retvalRead == UA_STATUSCODE_GOOD && UA_Variant_hasScalarType(&valueInModel, &UA_TYPES[UA_TYPES_UINT32])) {
-
-                    UA_UInt32 valueInModelUInt = *(UA_UInt32 *) valueInModel.data;
-                    std::cout << "Value in the information model: " << valueInModelUInt << std::endl;
-                    UA_UInt32 valueJsonUInt = country.getLocations().size();
-                    std::cout << "Value after parsing json file: " << valueJsonUInt << std::endl;
-
-                    if (!(valueInModelUInt == valueJsonUInt)) {
-                        std::cout << "Number of locations in the information model doesn't match one after parsing. Trying to adjust..." << std::endl;
-                        UA_Variant_setScalarCopy(&valueInModel, &valueJsonUInt, &UA_TYPES[UA_TYPES_UINT32]);
-                        UA_StatusCode retvalWrite = UA_Server_writeValue(&server, locationsNumberAttributeNodeId, valueInModel);
-
-                        //Re-read the value from the model to make sure we got it right.
-                        if (retvalRead == UA_STATUSCODE_GOOD) {
-                            UA_Variant valueInModel2;
-                            UA_Variant_init(&valueInModel2);
-                            UA_StatusCode retvalRead2 = UA_Server_readValue(&server, locationsNumberAttributeNodeId, &valueInModel2);
-                            UA_UInt32 valueInModel2UInt = *(UA_UInt32*)valueInModel2.data;
-                            std::cout << "New value in the information model: " << valueInModel2UInt << std::endl;
-                            UA_Variant_deleteMembers(&valueInModel2);
-                        }
-                        else {
-                            std::cout << "Adjustment failed." << std::endl;
-                        }
-                    }
-                    else {
-                        std::cout << "Number of locations in the information model matches the one after parsing. All good!" << std::endl;
-                    }
-                }
-                else {
-                    std::cout << "Coudn't check number of locations in the information model for this country: " << country.getName() << std::endl;
+                if (currentLocationsNumber != parseVectorSize) {
+                    std::cout << "Current locations number parameter doesn't match json parse. Validating the model..." << std::endl;
+                    validateLocationsNumberInTheModel(server, country, parseVectorSize);
                 }
 
-                UA_Variant_deleteMembers(&valueInModel);
-
-                for (size_t i{ 0 }; i < country.getLocations().size(); i++) {
+                for (size_t i{ 0 }; i < parseVectorSize; i++) {
                     std::string locationName = country.getLocations().at(i).getName();
                     std::string locationCity = country.getLocations().at(i).getCity();
                     std::string locationCountryCode = country.getLocations().at(i).getCountryCode();
@@ -446,9 +465,8 @@ namespace weatherserver {
                     /* Creates the identifier for the node id of the new Location object
                     The identifier for the node id of every location object will be: Countries.CountryCode.LocationName */
                     std::string countries{ CountryData::COUNTRIES_FOLDER_NODE_ID };
-                    std::string locationObjNameId =
-                        static_cast<std::string>(CountryData::COUNTRIES_FOLDER_NODE_ID)
-                        + "." + locationCountryCode + "." + locationName;
+                    std::string locationObjNameId =std::string(CountryData::COUNTRIES_FOLDER_NODE_ID) + "." + locationCountryCode
+                        + "." + locationName;
                     /* Creates an Location object node containing all the weather information related to it. */
                     UA_NodeId locationObjId = UA_NODEID_STRING(WebService::OPC_NS_INDEX, const_cast<char*>(locationObjNameId.c_str()));
                     UA_ObjectAttributes locationObjAttr = UA_ObjectAttributes_default;
@@ -505,7 +523,7 @@ namespace weatherserver {
 
                     /* Creates the identifier for the node id of the new Country object
                     The identifier for the node id of every Country object will be: Countries.CountryCode */
-                    std::string countryObjNameId = static_cast<std::string>(CountryData::COUNTRIES_FOLDER_NODE_ID) + "." + countryCode;
+                    std::string countryObjNameId = std::string(CountryData::COUNTRIES_FOLDER_NODE_ID) + "." + countryCode;
                     /* Creates a Country object node class of the folder type to containing some
                     attributes/member variables and organizes all the locations objects under it. */
                     UA_NodeId countryObjId = UA_NODEID_STRING(WebService::OPC_NS_INDEX, const_cast<char*>(countryObjNameId.c_str()));
@@ -637,7 +655,7 @@ namespace weatherserver {
             */
             if (length > 13) {
                 std::string countryCode = nodeIdName.substr(10, 2);
-                std::string countryObjNameId = static_cast<std::string>(CountryData::COUNTRIES_FOLDER_NODE_ID) + "." + countryCode;
+                std::string countryObjNameId = std::string(CountryData::COUNTRIES_FOLDER_NODE_ID) + "." + countryCode;
                 UA_NodeId countryObjId = UA_NODEID_STRING(WebService::OPC_NS_INDEX, const_cast<char*>(countryObjNameId.c_str()));
                 // Search for the country in the list of countries of the web service.
                 auto searchCountry = CountryData{ countryCode };
