@@ -1,5 +1,7 @@
 #include "LocationData.h"
 
+#include <set>
+
 namespace weatherserver {
 
     const utility::string_t LocationData::KEY_NAME = U("location");
@@ -49,16 +51,34 @@ namespace weatherserver {
     std::vector<LocationData> LocationData::parseJsonArray(web::json::value& jsonArray) {
         std::vector<LocationData> vectorAllLocations;
         if (jsonArray.is_array()) {
+
+            std::set<std::string> locationNames;
+
             for (size_t i{ 0 }; i < jsonArray.size(); i++) {
                 auto location = jsonArray[i];
+
                 LocationData locationData = LocationData::parseJson(location);
 
-                //Only add the location to the vector if has valid coordinates.
-                if (locationData.getLatitude() != LocationData::INVALID_LATITUDE
-                    && locationData.getLongitude() != LocationData::INVALID_LONGITUDE)
-                    vectorAllLocations.push_back(locationData);
+                std::string currentLocation { locationData.getName() };
+
+                //check in case we have duplicate locations for the same country - means NodeId will be a duplicate - can't use this entry
+                if (!locationNames.count(currentLocation)) {
+                    //Only add the location to the vector if has valid coordinates.
+                    if (locationData.getLatitude() != LocationData::INVALID_LATITUDE
+                        && locationData.getLongitude() != LocationData::INVALID_LONGITUDE) {
+                        vectorAllLocations.push_back(locationData);
+                        locationNames.insert(currentLocation);
+                    }
+                }
+                else {
+                    std::cout << "Duplicate location entry, NodeID will be invalid - skipping." << std::endl
+                        << "Country code: " << locationData.getCountryCode() << ". Location: " << currentLocation << std::endl;
+                }
+
             }
+
         }
+
 
         return vectorAllLocations;
     }

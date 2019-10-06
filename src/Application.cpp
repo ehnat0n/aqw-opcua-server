@@ -32,61 +32,61 @@ namespace weatherserver {
     @param const WeatherData& weatherData - The WeatherData object the data will be requested from.
     @param std::string weatherVariableName - The weather browse name to check which variable node to update.
     */
-    static void updateWeatherVariables(UA_DataValue* dataValue, const WeatherData& weatherData, std::string weatherVariableName) {
+    static void updateWeatherVariables(UA_DataValue& dataValue, const WeatherData& weatherData, const std::string& weatherVariableName) {
         if (weatherVariableName == WeatherData::BROWSE_LATITUDE) {
             UA_Double latitudeValue = weatherData.getLatitude();
-            UA_Variant_setScalarCopy(&(dataValue->value), &latitudeValue, &UA_TYPES[UA_TYPES_DOUBLE]);
-            dataValue->hasValue = true;
+            UA_Variant_setScalarCopy(&dataValue.value, &latitudeValue, &UA_TYPES[UA_TYPES_DOUBLE]);
+            dataValue.hasValue = true;
         }
         else if (weatherVariableName == WeatherData::BROWSE_LONGITUDE) {
             UA_Double longitudeValue = weatherData.getLongitude();
-            UA_Variant_setScalarCopy(&dataValue->value, &longitudeValue, &UA_TYPES[UA_TYPES_DOUBLE]);
-            dataValue->hasValue = true;
+            UA_Variant_setScalarCopy(&dataValue.value, &longitudeValue, &UA_TYPES[UA_TYPES_DOUBLE]);
+            dataValue.hasValue = true;
         }
         else if (weatherVariableName == WeatherData::BROWSE_TIMEZONE) {
             UA_String timezoneValue = UA_STRING(const_cast<char*>(weatherData.getTimezone().c_str()));
-            UA_Variant_setScalarCopy(&dataValue->value, &timezoneValue, &UA_TYPES[UA_TYPES_STRING]);
-            dataValue->hasValue = true;
+            UA_Variant_setScalarCopy(&dataValue.value, &timezoneValue, &UA_TYPES[UA_TYPES_STRING]);
+            dataValue.hasValue = true;
         }
         else if (weatherVariableName == WeatherData::BROWSE_ICON) {
             UA_String iconValue = UA_STRING(const_cast<char*>(weatherData.getCurrentlyIcon().c_str()));
-            UA_Variant_setScalarCopy(&dataValue->value, &iconValue, &UA_TYPES[UA_TYPES_STRING]);
-            dataValue->hasValue = true;
+            UA_Variant_setScalarCopy(&dataValue.value, &iconValue, &UA_TYPES[UA_TYPES_STRING]);
+            dataValue.hasValue = true;
         }
         else if (weatherVariableName == WeatherData::BROWSE_TEMPERATURE) {
             UA_Double temperatureValue = weatherData.getCurrentlyTemperature();
-            UA_Variant_setScalarCopy(&dataValue->value, &temperatureValue, &UA_TYPES[UA_TYPES_DOUBLE]);
-            dataValue->hasValue = true;
+            UA_Variant_setScalarCopy(&dataValue.value, &temperatureValue, &UA_TYPES[UA_TYPES_DOUBLE]);
+            dataValue.hasValue = true;
         }
         else if (weatherVariableName == WeatherData::BROWSE_APPARENT_TEMPERATURE) {
             UA_Double apparentTemperatureValue = weatherData.getCurrentlyApparentTemperature();
-            UA_Variant_setScalarCopy(&dataValue->value, &apparentTemperatureValue, &UA_TYPES[UA_TYPES_DOUBLE]);
-            dataValue->hasValue = true;
+            UA_Variant_setScalarCopy(&dataValue.value, &apparentTemperatureValue, &UA_TYPES[UA_TYPES_DOUBLE]);
+            dataValue.hasValue = true;
         }
         else if (weatherVariableName == WeatherData::BROWSE_HUMIDITY) {
             UA_Double humidityValue = weatherData.getCurrentlyHumidity();
-            UA_Variant_setScalarCopy(&dataValue->value, &humidityValue, &UA_TYPES[UA_TYPES_DOUBLE]);
-            dataValue->hasValue = true;
+            UA_Variant_setScalarCopy(&dataValue.value, &humidityValue, &UA_TYPES[UA_TYPES_DOUBLE]);
+            dataValue.hasValue = true;
         }
         else if (weatherVariableName == WeatherData::BROWSE_PRESSURE) {
             UA_Double pressureValue = weatherData.getCurrentlyPressure();
-            UA_Variant_setScalarCopy(&dataValue->value, &pressureValue, &UA_TYPES[UA_TYPES_DOUBLE]);
-            dataValue->hasValue = true;
+            UA_Variant_setScalarCopy(&dataValue.value, &pressureValue, &UA_TYPES[UA_TYPES_DOUBLE]);
+            dataValue.hasValue = true;
         }
         else if (weatherVariableName == WeatherData::BROWSE_WIND_SPEED) {
             UA_Double windSpeedValue = weatherData.getCurrentlyWindSpeed();
-            UA_Variant_setScalarCopy(&dataValue->value, &windSpeedValue, &UA_TYPES[UA_TYPES_DOUBLE]);
-            dataValue->hasValue = true;
+            UA_Variant_setScalarCopy(&dataValue.value, &windSpeedValue, &UA_TYPES[UA_TYPES_DOUBLE]);
+            dataValue.hasValue = true;
         }
         else if (weatherVariableName == WeatherData::BROWSE_WIND_BEARING) {
             UA_Double windBearingValue = weatherData.getCurrentlyWindBearing();
-            UA_Variant_setScalarCopy(&dataValue->value, &windBearingValue, &UA_TYPES[UA_TYPES_DOUBLE]);
-            dataValue->hasValue = true;
+            UA_Variant_setScalarCopy(&dataValue.value, &windBearingValue, &UA_TYPES[UA_TYPES_DOUBLE]);
+            dataValue.hasValue = true;
         }
         else if (weatherVariableName == WeatherData::BROWSE_CLOUD_COVER) {
             UA_Double cloudCoverValue = weatherData.getCurrentlyCloudCover();
-            UA_Variant_setScalarCopy(&dataValue->value, &cloudCoverValue, &UA_TYPES[UA_TYPES_DOUBLE]);
-            dataValue->hasValue = true;
+            UA_Variant_setScalarCopy(&dataValue.value, &cloudCoverValue, &UA_TYPES[UA_TYPES_DOUBLE]);
+            dataValue.hasValue = true;
         }
     }
 
@@ -167,7 +167,7 @@ namespace weatherserver {
                 }
             }
 
-            updateWeatherVariables(dataValue, itLocation->getWeatherData(), weatherVariableName);
+            updateWeatherVariables(*dataValue, itLocation->getWeatherData(), weatherVariableName);
         }
 
         return UA_STATUSCODE_GOOD;
@@ -180,7 +180,7 @@ namespace weatherserver {
     @param &location - The LocationData object which the weather will be requested for.
     @param UA_NodeId parentNodeId - The parent node id of the object where the variables will be added in OPC UA.
     */
-    static void requestWeather(UA_Server* server, LocationData& location, UA_NodeId parentNodeId) {
+    static void requestWeather(UA_Server& server, LocationData& location, const UA_NodeId& parentNodeId) {
         /* Flag to control how many time this the function requestWeather is called during the get node method of the UA_ServerConfig. */
         location.setIsAddingWeatherToAddressSpace(true);
 
@@ -201,7 +201,7 @@ namespace weatherserver {
         UA_DataSource latitudeVarDataSource;
         latitudeVarDataSource.read = readRequest;
         latitudeVarDataSource.write = NULL;
-        UA_Server_addDataSourceVariableNode(server, latitudeVarNodeId, parentNodeId,
+        UA_Server_addDataSourceVariableNode(&server, latitudeVarNodeId, parentNodeId,
             UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT),
             UA_QUALIFIEDNAME(WebService::OPC_NS_INDEX, WeatherData::BROWSE_LATITUDE),
             UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATAVARIABLETYPE), latitudeVarAttr, latitudeVarDataSource, NULL, NULL);
@@ -220,7 +220,7 @@ namespace weatherserver {
         UA_DataSource longitudeVarDataSource;
         longitudeVarDataSource.read = readRequest;
         longitudeVarDataSource.write = NULL;
-        UA_Server_addDataSourceVariableNode(server, longitudeVarNodeId, parentNodeId,
+        UA_Server_addDataSourceVariableNode(&server, longitudeVarNodeId, parentNodeId,
             UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT),
             UA_QUALIFIEDNAME(WebService::OPC_NS_INDEX, WeatherData::BROWSE_LONGITUDE),
             UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATAVARIABLETYPE), longitudeVarAttr, longitudeVarDataSource, NULL, NULL);
@@ -236,7 +236,7 @@ namespace weatherserver {
         UA_DataSource timezoneVarDataSource;
         timezoneVarDataSource.read = readRequest;
         timezoneVarDataSource.write = NULL;
-        UA_Server_addDataSourceVariableNode(server, timezoneVarNodeId, parentNodeId,
+        UA_Server_addDataSourceVariableNode(&server, timezoneVarNodeId, parentNodeId,
             UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT),
             UA_QUALIFIEDNAME(WebService::OPC_NS_INDEX, WeatherData::BROWSE_TIMEZONE),
             UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATAVARIABLETYPE), timezoneVarAttr, timezoneVarDataSource, NULL, NULL);
@@ -252,7 +252,7 @@ namespace weatherserver {
         UA_DataSource iconVarDataSource;
         iconVarDataSource.read = readRequest;
         iconVarDataSource.write = NULL;
-        UA_Server_addDataSourceVariableNode(server, iconVarNodeId, parentNodeId,
+        UA_Server_addDataSourceVariableNode(&server, iconVarNodeId, parentNodeId,
             UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT),
             UA_QUALIFIEDNAME(WebService::OPC_NS_INDEX, WeatherData::BROWSE_ICON),
             UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATAVARIABLETYPE), iconVarAttr, iconVarDataSource, NULL, NULL);
@@ -268,7 +268,7 @@ namespace weatherserver {
         UA_DataSource temperatureVarDataSource;
         temperatureVarDataSource.read = readRequest;
         temperatureVarDataSource.write = NULL;
-        UA_Server_addDataSourceVariableNode(server, temperatureVarNodeId, parentNodeId,
+        UA_Server_addDataSourceVariableNode(&server, temperatureVarNodeId, parentNodeId,
             UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT),
             UA_QUALIFIEDNAME(WebService::OPC_NS_INDEX, WeatherData::BROWSE_TEMPERATURE),
             UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATAVARIABLETYPE), temperatureVarAttr, temperatureVarDataSource, NULL, NULL);
@@ -284,7 +284,7 @@ namespace weatherserver {
         UA_DataSource apparentTemperatureVarDataSource;
         apparentTemperatureVarDataSource.read = readRequest;
         apparentTemperatureVarDataSource.write = NULL;
-        UA_Server_addDataSourceVariableNode(server, apparentTemperatureVarNodeId, parentNodeId,
+        UA_Server_addDataSourceVariableNode(&server, apparentTemperatureVarNodeId, parentNodeId,
             UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT),
             UA_QUALIFIEDNAME(WebService::OPC_NS_INDEX, WeatherData::BROWSE_APPARENT_TEMPERATURE),
             UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATAVARIABLETYPE), apparentTemperatureVarAttr, apparentTemperatureVarDataSource, NULL, NULL);
@@ -300,7 +300,7 @@ namespace weatherserver {
         UA_DataSource humidityVarDataSource;
         humidityVarDataSource.read = readRequest;
         humidityVarDataSource.write = NULL;
-        UA_Server_addDataSourceVariableNode(server, humidityVarNodeId, parentNodeId,
+        UA_Server_addDataSourceVariableNode(&server, humidityVarNodeId, parentNodeId,
             UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT),
             UA_QUALIFIEDNAME(WebService::OPC_NS_INDEX, WeatherData::BROWSE_HUMIDITY),
             UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATAVARIABLETYPE), humidityVarAttr, humidityVarDataSource, NULL, NULL);
@@ -316,7 +316,7 @@ namespace weatherserver {
         UA_DataSource pressureVarDataSource;
         pressureVarDataSource.read = readRequest;
         pressureVarDataSource.write = NULL;
-        UA_Server_addDataSourceVariableNode(server, pressureVarNodeId, parentNodeId,
+        UA_Server_addDataSourceVariableNode(&server, pressureVarNodeId, parentNodeId,
             UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT),
             UA_QUALIFIEDNAME(WebService::OPC_NS_INDEX, WeatherData::BROWSE_PRESSURE),
             UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATAVARIABLETYPE), pressureVarAttr, pressureVarDataSource, NULL, NULL);
@@ -332,7 +332,7 @@ namespace weatherserver {
         UA_DataSource windSpeedVarDataSource;
         windSpeedVarDataSource.read = readRequest;
         windSpeedVarDataSource.write = NULL;
-        UA_Server_addDataSourceVariableNode(server, windSpeedVarNodeId, parentNodeId,
+        UA_Server_addDataSourceVariableNode(&server, windSpeedVarNodeId, parentNodeId,
             UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT),
             UA_QUALIFIEDNAME(WebService::OPC_NS_INDEX, WeatherData::BROWSE_WIND_SPEED),
             UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATAVARIABLETYPE), windSpeedVarAttr, windSpeedVarDataSource, NULL, NULL);
@@ -348,7 +348,7 @@ namespace weatherserver {
         UA_DataSource windBearingVarDataSource;
         windBearingVarDataSource.read = readRequest;
         windBearingVarDataSource.write = NULL;
-        UA_Server_addDataSourceVariableNode(server, windBearingVarNodeId, parentNodeId,
+        UA_Server_addDataSourceVariableNode(&server, windBearingVarNodeId, parentNodeId,
             UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT),
             UA_QUALIFIEDNAME(WebService::OPC_NS_INDEX, WeatherData::BROWSE_WIND_BEARING),
             UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATAVARIABLETYPE), windBearingVarAttr, windBearingVarDataSource, NULL, NULL);
@@ -364,7 +364,7 @@ namespace weatherserver {
         UA_DataSource cloudCoverVarDataSource;
         cloudCoverVarDataSource.read = readRequest;
         cloudCoverVarDataSource.write = NULL;
-        UA_Server_addDataSourceVariableNode(server, cloudCoverVarNodeId, parentNodeId,
+        UA_Server_addDataSourceVariableNode(&server, cloudCoverVarNodeId, parentNodeId,
             UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT),
             UA_QUALIFIEDNAME(WebService::OPC_NS_INDEX, WeatherData::BROWSE_CLOUD_COVER),
             UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATAVARIABLETYPE), cloudCoverVarAttr, cloudCoverVarDataSource, NULL, NULL);
@@ -381,7 +381,7 @@ namespace weatherserver {
     in this function. Locations will be added to it.
     @param UA_NodeId parentNodeId - The parent node id of the object where the variables will be added in OPC UA.
     */
-    static void requestLocations(UA_Server* server, CountryData& country, UA_NodeId parentNodeId) {
+    static void requestLocations(UA_Server& server, CountryData& country, const UA_NodeId& parentNodeId) {
         try {
             // ReSharper disable once CppExpressionWithoutSideEffects
             webService->fetchAllLocations(country.getCode(), country.getLocationsNumber()).then([&](web::json::value response) {
@@ -390,6 +390,7 @@ namespace weatherserver {
                 /*
                 Trying to check if original LocationsNumber actually matches with records in json file. Adjust if needed.
                 */
+
                 //crafting NodeID for our locations number attribute inside the information model
                 std::string locationsNumberAtrID = static_cast<std::string>(CountryData::COUNTRIES_FOLDER_NODE_ID) + "."
                     + country.getCode() + "." + static_cast<std::string>(CountryData::BROWSE_LOCATIONS_NUMBER);
@@ -397,7 +398,8 @@ namespace weatherserver {
                 UA_NodeId nodeIdLocationsNumberAtr = UA_NODEID_STRING(WebService::OPC_NS_INDEX, const_cast<char*>(locationsNumberAtrID.c_str()));
 
                 UA_Variant valueInModel;
-                UA_StatusCode retvalRead = UA_Server_readValue(server, nodeIdLocationsNumberAtr, &valueInModel);
+                UA_Variant_init(&valueInModel);
+                UA_StatusCode retvalRead = UA_Server_readValue(&server, nodeIdLocationsNumberAtr, &valueInModel);
 
                 if (retvalRead == UA_STATUSCODE_GOOD && UA_Variant_hasScalarType(&valueInModel, &UA_TYPES[UA_TYPES_UINT32])) {
 
@@ -408,11 +410,13 @@ namespace weatherserver {
 
                     if (!(valueInModelUAInt == valueAfterParsingUAInt)) {
                         std::cout << "Number of locations in the information model doesn't match one after parsing. Trying to adjust..." << std::endl;
-                        UA_Variant_setScalar(&valueInModel, &valueAfterParsingUAInt, &UA_TYPES[UA_TYPES_UINT32]);
-                        UA_StatusCode retvalWrite = UA_Server_writeValue(server, nodeIdLocationsNumberAtr, valueInModel);
+                        UA_Variant_setScalarCopy(&valueInModel, &valueAfterParsingUAInt, &UA_TYPES[UA_TYPES_UINT32]);
+                        UA_StatusCode retvalWrite = UA_Server_writeValue(&server, nodeIdLocationsNumberAtr, valueInModel);
+
+                        //Re-read the value from the model to make sure we got it right.
                         if (retvalRead == UA_STATUSCODE_GOOD) {
                             UA_Variant valueInModel2;
-                            UA_StatusCode retvalRead2 = UA_Server_readValue(server, nodeIdLocationsNumberAtr, &valueInModel2);
+                            UA_StatusCode retvalRead2 = UA_Server_readValue(&server, nodeIdLocationsNumberAtr, &valueInModel2);
                             UA_UInt32 valueInModelUAInt2 = *(UA_UInt32*)valueInModel2.data;
                             std::cout << "New value in the information model: " << valueInModelUAInt2 << std::endl;
                         }
@@ -427,6 +431,8 @@ namespace weatherserver {
                 else {
                     std::cout << "Coudn't check number of locations in the information model for this country: " << country.getName() << std::endl;
                 }
+
+                UA_Variant_deleteMembers(&valueInModel);
 
                 for (size_t i{ 0 }; i < country.getLocations().size(); i++) {
                     std::string locationName = country.getLocations().at(i).getName();
@@ -447,7 +453,7 @@ namespace weatherserver {
                     char desc[] = "Location object containing weather information";
                     locationObjAttr.description = UA_LOCALIZEDTEXT(locale, desc);
                     locationObjAttr.displayName = UA_LOCALIZEDTEXT(locale, const_cast<char*>(locationName.c_str()));
-                    UA_Server_addObjectNode(server, locationObjId, parentNodeId,
+                    UA_Server_addObjectNode(&server, locationObjId, parentNodeId,
                         UA_NODEID_NUMERIC(0, UA_NS0ID_ORGANIZES),
                         UA_QUALIFIEDNAME(WebService::OPC_NS_INDEX, const_cast<char*>(locationName.c_str())),
                         UA_NODEID_NUMERIC(0, UA_NS0ID_BASEOBJECTTYPE), locationObjAttr, NULL, NULL);
@@ -460,7 +466,7 @@ namespace weatherserver {
                     char flagInitializeAttrDesc[] = "Auxiliary variable to indicate when to download weather data for this location.";
                     flagInitializeVarAttr.description = UA_LOCALIZEDTEXT(locale, flagInitializeAttrDesc);
                     flagInitializeVarAttr.displayName = UA_LOCALIZEDTEXT(locale, LocationData::BROWSE_FLAG_INITIALIZE);
-                    UA_Server_addVariableNode(server, flagInitializeVarNodeId, locationObjId,
+                    UA_Server_addVariableNode(&server, flagInitializeVarNodeId, locationObjId,
                         UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT),
                         UA_QUALIFIEDNAME(WebService::OPC_NS_INDEX, LocationData::BROWSE_FLAG_INITIALIZE),
                         UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATAVARIABLETYPE), flagInitializeVarAttr, NULL, NULL);
@@ -483,7 +489,7 @@ namespace weatherserver {
     @param *server - The OPC UA server where the objects will be added in the address space view.
     @param UA_NodeId parentNodeId - The parent node id of the object where the variables will be added in OPC UA.
     */
-    void requestCountries(UA_Server* server, const UA_NodeId* parentNodeId) {
+    void requestCountries(UA_Server& server, const UA_NodeId& parentNodeId) {
         try {
             webService->fetchAllCountries().then([&](web::json::value response) {
                 webService->setAllCountries(CountryData::parseJsonArray(response));
@@ -505,7 +511,7 @@ namespace weatherserver {
                     char countryObjAttrDesc[] = "Country object with attributes and locations information.";
                     countryObjAttr.description = UA_LOCALIZEDTEXT(locale, countryObjAttrDesc);
                     countryObjAttr.displayName = UA_LOCALIZEDTEXT(locale, const_cast<char*>(countryName.c_str()));
-                    UA_Server_addObjectNode(server, countryObjId, parentNodeId,
+                    UA_Server_addObjectNode(&server, countryObjId, parentNodeId,
                         UA_NODEID_NUMERIC(0, UA_NS0ID_ORGANIZES),
                         UA_QUALIFIEDNAME(WebService::OPC_NS_INDEX, const_cast<char*>(countryName.c_str())),
                         UA_NODEID_NUMERIC(0, UA_NS0ID_FOLDERTYPE), countryObjAttr, NULL, NULL);
@@ -518,7 +524,7 @@ namespace weatherserver {
                     char nameVarAttrDesc[] = "The name of a country";
                     nameVarAttr.description = UA_LOCALIZEDTEXT(locale, nameVarAttrDesc);
                     nameVarAttr.displayName = UA_LOCALIZEDTEXT(locale, CountryData::BROWSE_NAME);
-                    UA_Server_addVariableNode(server, nameVarNodeId, countryObjId,
+                    UA_Server_addVariableNode(&server, nameVarNodeId, countryObjId,
                         UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT),
                         UA_QUALIFIEDNAME(WebService::OPC_NS_INDEX, CountryData::BROWSE_NAME),
                         UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATAVARIABLETYPE), nameVarAttr, NULL, NULL);
@@ -531,7 +537,7 @@ namespace weatherserver {
                     char codeVarAttrDesc[] = "2 letters ISO code representing the Country Name";
                     codeVarAttr.description = UA_LOCALIZEDTEXT(locale, codeVarAttrDesc);
                     codeVarAttr.displayName = UA_LOCALIZEDTEXT(locale, CountryData::BROWSE_CODE);
-                    UA_Server_addVariableNode(server, codeVarNodeId, countryObjId,
+                    UA_Server_addVariableNode(&server, codeVarNodeId, countryObjId,
                         UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT),
                         UA_QUALIFIEDNAME(WebService::OPC_NS_INDEX, CountryData::BROWSE_CODE),
                         UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATAVARIABLETYPE), codeVarAttr, NULL, NULL);
@@ -544,7 +550,7 @@ namespace weatherserver {
                     char citiesNumberVarAttrDesc[] = "Number of cities belonged to a country. It can be city or province";
                     citiesNumberVarAttr.description = UA_LOCALIZEDTEXT(locale, citiesNumberVarAttrDesc);
                     citiesNumberVarAttr.displayName = UA_LOCALIZEDTEXT(locale, CountryData::BROWSE_CITIES_NUMBER);
-                    UA_Server_addVariableNode(server, citiesNumberVarNodeId, countryObjId,
+                    UA_Server_addVariableNode(&server, citiesNumberVarNodeId, countryObjId,
                         UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT),
                         UA_QUALIFIEDNAME(1, CountryData::BROWSE_CITIES_NUMBER),
                         UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATAVARIABLETYPE), citiesNumberVarAttr, NULL, NULL);
@@ -558,7 +564,7 @@ namespace weatherserver {
                     char locationsNumberVarAttrDesc[] = "Number of cities belonged to a country. It can be city or province";
                     locationsNumberVarAttr.description = UA_LOCALIZEDTEXT(locale, locationsNumberVarAttrDesc);
                     locationsNumberVarAttr.displayName = UA_LOCALIZEDTEXT(locale, CountryData::BROWSE_LOCATIONS_NUMBER);
-                    UA_Server_addVariableNode(server, locationsNumberVarNodeId, countryObjId,
+                    UA_Server_addVariableNode(&server, locationsNumberVarNodeId, countryObjId,
                         UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT),
                         UA_QUALIFIEDNAME(1, CountryData::BROWSE_LOCATIONS_NUMBER),
                         UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATAVARIABLETYPE), locationsNumberVarAttr, NULL, NULL);
@@ -579,7 +585,7 @@ namespace weatherserver {
     Add the Countries object node class in the address space and call the request for the other countries sub objects and its subcomponents.
     @param *server - The OPC UA server where the objects will be added in the address space view.
     */
-    static void addCountries(UA_Server* server) {
+    static void addCountries(UA_Server& server) {
         // This will control how many times this method executes. It's to be executed ONLY ONCE!
         static bool wasItCalled = false;
 
@@ -594,13 +600,13 @@ namespace weatherserver {
             char countriesObjAttrDesc[] = "Organizes all the Countries object with their respective information";
             countriesObjAttr.description = UA_LOCALIZEDTEXT(locale, countriesObjAttrDesc);
             countriesObjAttr.displayName = UA_LOCALIZEDTEXT(locale, CountryData::COUNTRIES_FOLDER_NODE_ID);
-            UA_Server_addObjectNode(server, countriesObjId,
+            UA_Server_addObjectNode(&server, countriesObjId,
                 UA_NODEID_NUMERIC(0, UA_NS0ID_OBJECTSFOLDER),
                 UA_NODEID_NUMERIC(0, UA_NS0ID_ORGANIZES),
                 UA_QUALIFIEDNAME(WebService::OPC_NS_INDEX, CountryData::COUNTRIES_FOLDER_NODE_ID),
                 UA_NODEID_NUMERIC(0, UA_NS0ID_FOLDERTYPE), countriesObjAttr, NULL, NULL);
 
-            requestCountries(server, &countriesObjId);
+            requestCountries(server, countriesObjId);
         }
     }
 
@@ -636,7 +642,7 @@ namespace weatherserver {
 
                 // Only download locations if they don't exist and the country has been initialized (added to the address space).
                 if (itCountry->getIsInitialized() && itCountry->getLocations().size() == 0) {
-                    requestLocations(webService->getServer(), *itCountry, countryObjId);
+                    requestLocations(*webService->getServer(), *itCountry, countryObjId);
                 }
                 // Only try to download weather data if locations has been added to the country being read.
                 if (itCountry->getIsInitialized() && itCountry->getLocations().size() > 0) {
@@ -679,7 +685,7 @@ namespace weatherserver {
                             The isAddingWeatherToAddressSpace boolean variable in LocationData controls when we are adding the weather data in the OPC UA address space, that being said the requestWeather function bellow will not be called more than once.
                             */
                             if (itLocation->getIsInitialized() && !(itLocation->getHasBeenReceivedWeatherData()) && !(itLocation->getIsAddingWeatherToAddressSpace())) {
-                                requestWeather(webService->getServer(), *itLocation, locationObjId);
+                                requestWeather(*webService->getServer(), *itLocation, locationObjId);
                             }
                         }
                     }
@@ -787,7 +793,7 @@ int main(int argc, char* argv[]) {
 
         // HERE you can add any node to the server you like.
         // Make sure that you only call any created method once in this loop.
-        weatherserver::addCountries(server);
+        weatherserver::addCountries(*server);
 
         /* Now we can use the max timeout to do something else. In this case, we just sleep. */
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
